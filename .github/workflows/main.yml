@@ -1,4 +1,4 @@
-name: Playit RDP Tunnel
+name: Playit RDP Tunnel (Linux)
 
 on:
   workflow_dispatch:
@@ -8,31 +8,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Check out the repository
-      uses: actions/checkout@v2
-
-    - name: Download and Install Playit
+    - name: Update & Install Desktop + RDP Server
       run: |
-        Invoke-WebRequest -Uri "https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-linux-amd64" -OutFile "$env:USERPROFILE\playit.exe"
-        Start-Sleep -Seconds 5  # Give some time for the download to complete
+        sudo apt update
+        sudo apt install -y xrdp xfce4 xfce4-goodies
+        echo xfce4-session > ~/.xsession
+        sudo systemctl enable xrdp
+        sudo systemctl start xrdp
+        sudo ufw allow 3389
 
-        
-    # Default, optional.
-    - name: Enable TS
-      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server'-name "fDenyTSConnections" -Value 0
-    - run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-    - run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
-    - run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "p@ssw0rd!" -Force)
+    - name: Set Password for Default User
+      run: echo "ubuntu:toor123" | sudo chpasswd
 
-    - name: Start Playit and Set Up RDP Tunnel
-      env:
-        PLAYIT_AUTH_KEY: ${{ secrets.PL }} 
+    - name: Download & Run Playit
       run: |
-        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow -Wait
-        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -NoNewWindow
+        wget https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-linux-amd64 -O playit
+        chmod +x playit
+        nohup ./playit --secret "${{ secrets.PLAYIT_KEY }}" > playit.log 2>&1 &
+        sleep 5
+        cat playit.log
 
-        
-    # Prevent workflow to stop
-    - name: Keep the GitHub Action Runner Alive
-      run: |
-          Start-Sleep -Seconds 11800  # Adjust the duration based on your needs
+    - name: Keep Runner Alive
+      run: sleep 10800
