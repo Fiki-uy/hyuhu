@@ -1,4 +1,4 @@
-name: Playit RDP Tunnel (Linux)
+name: Playit RDP Tunnel (Linux Fixed)
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Update & Install Desktop + RDP Server
+    - name: Install Desktop & RDP
       run: |
         sudo apt update
         sudo apt install -y xrdp xfce4 xfce4-goodies
@@ -17,8 +17,11 @@ jobs:
         sudo systemctl start xrdp
         sudo ufw allow 3389
 
-    - name: Set Password for Default User
-      run: echo "ubuntu:toor123" | sudo chpasswd
+    - name: Create New RDP User
+      run: |
+        sudo useradd -m rdpuser
+        echo "rdpuser:toor123" | sudo chpasswd
+        sudo usermod -aG sudo rdpuser
 
     - name: Download & Run Playit
       run: |
@@ -28,5 +31,5 @@ jobs:
         sleep 5
         cat playit.log
 
-    - name: Keep Runner Alive
+    - name: Keep Alive
       run: sleep 10800
