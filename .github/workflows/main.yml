@@ -27,7 +27,7 @@ jobs:
       run: |
         wget https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-linux-amd64 -O playit
         chmod +x playit
-        nohup ./playit --secret "${{ secrets.PLAYIT_KEY }}" > playit.log 2>&1 &
+        nohup ./playit --secret "${{ secrets.PL }}" > playit.log 2>&1 &
         sleep 5
         cat playit.log
 
