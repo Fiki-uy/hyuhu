@@ -5,71 +5,18 @@ on:
 
 jobs:
   setup-rdp-tunnel:
-    runs-on: windows-latest
+    runs-on: windows-2019
 
     steps:
     - name: Check out the repository
       uses: actions/checkout@v2
-
-    - name: Maximize Optimization
-      run: |
-        # Matikan service ga perlu
-        $services = @("wuauserv", "DiagTrack", "dmwappushservice", "XboxGipSvc", "WSearch", "SysMain")
-        foreach ($svc in $services) {
-          Stop-Service -Name $svc -Force -ErrorAction SilentlyContinue
-          Set-Service -Name $svc -StartupType Disabled -ErrorAction SilentlyContinue
-        }
-        # Matikan fitur ga perlu
-        $features = @("Internet-Explorer-Optional-amd64", "WindowsMediaPlayer", "Printing-XPSServices-Features", "WorkFolders-Client")
-        foreach ($feature in $features) {
-          Disable-WindowsOptionalFeature -Online -FeatureName $feature -NoRestart -ErrorAction SilentlyContinue
-        }
-        # Hapus Visual Studio
-        $vsInstallerPath = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
-        if (Test-Path $vsInstallerPath) {
-          Start-Process -FilePath $vsInstallerPath -ArgumentList "--quiet --uninstall" -Wait
-        }
-        # Hapus aplikasi spesifik (kalo ada uninstaller)
-        # MongoDB
-        $mongoPath = "C:\Program Files\MongoDB\Server\5.0\unins000.exe"
-        if (Test-Path $mongoPath) {
-          Start-Process -FilePath $mongoPath -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES" -Wait
-        }
-        # Node.js
-        $nodePath = "C:\Program Files\nodejs\uninstall.exe"
-        if (Test-Path $nodePath) {
-          Start-Process -FilePath $nodePath -ArgumentList "/S" -Wait
-        }
-        # Python
-        Get-Item "C:\Python*" | ForEach-Object {
-          $pythonUninstaller = Join-Path $_.FullName "uninstall.exe"
-          if (Test-Path $pythonUninstaller) {
-            Start-Process -FilePath $pythonUninstaller -ArgumentList "/S" -Wait
-          }
-        }
-        # Ruby
-        Get-Item "C:\Ruby*" | ForEach-Object {
-          $rubyUninstaller = Join-Path $_.FullName "unins000.exe"
-          if (Test-Path $rubyUninstaller) {
-            Start-Process -FilePath $rubyUninstaller -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES" -Wait
-          }
-        }
-        # Go
-        $goPath = "C:\Program Files\Go\uninstall.exe"
-        if (Test-Path $goPath) {
-          Start-Process -FilePath $goPath -ArgumentList "/S" -Wait
-        }
-        # 7-Zip
-        $sevenZipPath = "C:\Program Files\7-Zip\Uninstall.exe"
-        if (Test-Path $sevenZipPath) {
-          Start-Process -FilePath $sevenZipPath -ArgumentList "/S" -Wait
-        }
 
     - name: Download and Install Playit
       run: |
         Invoke-WebRequest -Uri "https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-windows-x86_64-signed.exe" -OutFile "$env:USERPROFILE\playit.exe"
         Start-Sleep -Seconds 5  # Give some time for the download to complete
 
+        
     # Default, optional.
     - name: Enable TS
       run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server'-name "fDenyTSConnections" -Value 0
@@ -84,6 +31,7 @@ jobs:
         Start-Process -FilePath "$env:USERPROFILE\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow -Wait
         Start-Process -FilePath "$env:USERPROFILE\playit.exe" -NoNewWindow
 
+        
     # Prevent workflow to stop
     - name: Keep the GitHub Action Runner Alive
       run: |
