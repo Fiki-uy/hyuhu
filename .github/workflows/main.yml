@@ -13,8 +13,6 @@ jobs:
 
     - name: Maximize Optimization
       run: |
-        # Hapus semua Modern Apps kecuali Store dan Calculator
-        Get-AppxPackage -AllUsers | Where-Object { $_.Name -notlike "*Store*" -and $_.Name -notlike "*Calculator*" } | Remove-AppxPackage
         # Matikan service ga perlu
         $services = @("wuauserv", "DiagTrack", "dmwappushservice", "XboxGipSvc", "WSearch", "SysMain")
         foreach ($svc in $services) {
@@ -25,6 +23,11 @@ jobs:
         $features = @("Internet-Explorer-Optional-amd64", "WindowsMediaPlayer", "Printing-XPSServices-Features", "WorkFolders-Client")
         foreach ($feature in $features) {
           Disable-WindowsOptionalFeature -Online -FeatureName $feature -NoRestart -ErrorAction SilentlyContinue
+        }
+        # Hapus Visual Studio
+        $vsInstallerPath = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
+        if (Test-Path $vsInstallerPath) {
+          Start-Process -FilePath $vsInstallerPath -ArgumentList "--quiet --uninstall" -Wait
         }
         # Hapus aplikasi spesifik (kalo ada uninstaller)
         # MongoDB
