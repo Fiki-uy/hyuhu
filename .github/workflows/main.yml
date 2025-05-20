@@ -6,29 +6,37 @@ on:
 jobs:
   setup-rdp-tunnel:
     runs-on: ubuntu-22.04
+
     steps:
-    - name: Check out the repository
+    - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Install Dependencies
+    - name: Install Desktop & RDP
       run: |
         sudo apt-get update
         sudo apt-get install -y xrdp xfce4 xfce4-goodies dbus-x11
         sudo systemctl enable xrdp
         sudo systemctl start xrdp
-        export $(dbus-launch)
-        echo "xfce4-session" > ~/.xsession
 
-    - name: Configure User Password and XFCE Session
+    - name: Configure User and XFCE Session
       run: |
+        # Buat user runneradmin kalau belum ada
         id runneradmin || sudo useradd -m -s /bin/bash runneradmin
         echo "runneradmin:p@ssw0rd!" | sudo chpasswd
+
+        # Setup session XFCE
         echo "xfce4-session" | sudo tee /home/runneradmin/.xsession
         sudo chown runneradmin:runneradmin /home/runneradmin/.xsession
+
+        # Tambahin env fix buat XDG & dbus ke .profile user
+        echo 'export XDG_CONFIG_DIRS="/etc/xdg"' | sudo tee -a /home/runneradmin/.profile
+        echo 'eval $(dbus-launch --sh-syntax)' | sudo tee -a /home/runneradmin/.profile
+
+        # Bikin folder config xfce
         sudo mkdir -p /home/runneradmin/.config/xfce4
         sudo chown -R runneradmin:runneradmin /home/runneradmin/.config
 
-    - name: Configure Firewall
+    - name: Allow RDP Port
       run: |
         sudo ufw allow 3389
         sudo ufw --force enable
@@ -40,15 +48,14 @@ jobs:
 
     - name: Start Playit and Set Up RDP Tunnel
       run: |
-        export XDG_CONFIG_DIRS="/etc/xdg"
-        ~/playit --secret ${{ secrets.PL }} &
+        sudo -u runneradmin bash -c 'eval $(dbus-launch --sh-syntax); ~/playit --secret ${{ secrets.PL }} &' 
         sleep 5
         if ! pgrep -x "playit" > /dev/null; then
           echo "Playit failed to start"
           exit 1
         fi
 
-    - name: Keep the GitHub Action Runner Alive
+    - name: Keep Runner Alive
       run: |
-        echo "RDP tunnel is up. Keeping session alive..."
+        echo "RDP ready. Keepin' it alive..."
         sleep 11800
