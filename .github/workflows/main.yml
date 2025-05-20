@@ -17,7 +17,7 @@ jobs:
     - name: Create and Configure User
       run: |
         sudo useradd -m -s /bin/bash runneradmin
-        echo "runneradmin:p@ssw0rd!" | sudo chpasswd  # Password di-hardcode
+        echo "runner:fiki123" | sudo chpasswd  # Password di-hardcode
     - name: Configure Firewall
       run: |
         sudo ufw allow 3389
