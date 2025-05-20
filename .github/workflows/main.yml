@@ -1,61 +1,41 @@
 name: Playit RDP Tunnel Linux
-
 on:
   workflow_dispatch:
-
 jobs:
   setup-rdp-tunnel:
     runs-on: ubuntu-22.04
-
     steps:
-    - name: Checkout Repository
+    - name: Check out the repository
       uses: actions/checkout@v4
-
-    - name: Install Desktop & RDP
+    - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y xrdp xfce4 xfce4-goodies dbus-x11
+        sudo apt-get install -y xrdp xfce4 xfce4-goodies xfce4-session
         sudo systemctl enable xrdp
         sudo systemctl start xrdp
-
-    - name: Configure User and XFCE Session
+        echo "xfce4-session" > ~/.xsession
+        # Set variabel lingkungan untuk XDG
+        echo "XDG_CONFIG_DIRS=/etc" | sudo tee -a /etc/environment
+    - name: Configure User Password
       run: |
-        # Buat user runneradmin kalau belum ada
         id runneradmin || sudo useradd -m -s /bin/bash runneradmin
         echo "runneradmin:p@ssw0rd!" | sudo chpasswd
-
-        # Setup session XFCE
-        echo "xfce4-session" | sudo tee /home/runneradmin/.xsession
-        sudo chown runneradmin:runneradmin /home/runneradmin/.xsession
-
-        # Tambahin env fix buat XDG & dbus ke .profile user
-        echo 'export XDG_CONFIG_DIRS="/etc/xdg"' | sudo tee -a /home/runneradmin/.profile
-        echo 'eval $(dbus-launch --sh-syntax)' | sudo tee -a /home/runneradmin/.profile
-
-        # Bikin folder config xfce
-        sudo mkdir -p /home/runneradmin/.config/xfce4
-        sudo chown -R runneradmin:runneradmin /home/runneradmin/.config
-
-    - name: Allow RDP Port
+    - name: Configure Firewall
       run: |
         sudo ufw allow 3389
-        sudo ufw --force enable
-
+        sudo ufw reload
     - name: Download and Install Playit
       run: |
         wget https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-linux-amd64 -O ~/playit
         chmod +x ~/playit
-
     - name: Start Playit and Set Up RDP Tunnel
       run: |
-        sudo -u runneradmin bash -c 'eval $(dbus-launch --sh-syntax); ~/playit --secret ${{ secrets.PL }} &' 
+        ~/playit --secret ${{ secrets.PL }} &
         sleep 5
         if ! pgrep -x "playit" > /dev/null; then
           echo "Playit failed to start"
           exit 1
         fi
-
-    - name: Keep Runner Alive
+    - name: Keep the GitHub Action Runner Alive
       run: |
-        echo "RDP ready. Keepin' it alive..."
         sleep 11800
