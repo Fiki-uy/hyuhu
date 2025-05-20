@@ -14,10 +14,11 @@ jobs:
         sudo systemctl enable xrdp
         sudo systemctl start xrdp
         echo "xfce4-session" > ~/.xsession
-    - name: Create and Configure User
+    - name: Configure User Password
       run: |
-        sudo useradd -m -s /bin/bash runneradmin
-        echo "runner:fiki123" | sudo chpasswd  # Password di-hardcode
+        # Cek apakah user runneradmin sudah ada, kalau belum bikin
+        id runneradmin || sudo useradd -m -s /bin/bash runneradmin
+        echo "runneradmin:p@ssw0rd!" | sudo chpasswd  # Password di-hardcode
     - name: Configure Firewall
       run: |
         sudo ufw allow 3389
@@ -27,10 +28,8 @@ jobs:
         wget https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-linux-x86_64 -O ~/playit
         chmod +x ~/playit
     - name: Start Playit and Set Up RDP Tunnel
-      env:
-        PLAYIT_AUTH_KEY: ${{ secrets.PL }}
       run: |
-        ~/playit --secret $PLAYIT_AUTH_KEY &
+        ~/playit --secret ${{ secrets.PL }} &
         sleep 5
         if ! pgrep -x "playit" > /dev/null; then
           echo "Playit failed to start"
