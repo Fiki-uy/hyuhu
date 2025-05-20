@@ -10,16 +10,20 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y xrdp xfce4 xfce4-goodies xfce4-session
+        sudo apt-get install -y xrdp xfce4 xfce4-goodies xfce4-session dbus-x11
         sudo systemctl enable xrdp
         sudo systemctl start xrdp
         echo "xfce4-session" > ~/.xsession
         # Set variabel lingkungan untuk XDG
         echo "XDG_CONFIG_DIRS=/etc" | sudo tee -a /etc/environment
+        # Konfigurasi xrdp untuk user
+        sudo sed -i 's/allowed_users=console/allowed_users=anybody/' /etc/X11/Xwrapper.config
     - name: Configure User Password
       run: |
         id runneradmin || sudo useradd -m -s /bin/bash runneradmin
         echo "runneradmin:p@ssw0rd!" | sudo chpasswd
+        # Set session untuk user
+        sudo -u runneradmin bash -c 'echo "xfce4-session" > /home/runneradmin/.xsession'
     - name: Configure Firewall
       run: |
         sudo ufw allow 3389
