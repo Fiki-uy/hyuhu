@@ -1,40 +1,54 @@
 name: Playit RDP Tunnel Linux
+
 on:
   workflow_dispatch:
+
 jobs:
   setup-rdp-tunnel:
     runs-on: ubuntu-22.04
     steps:
     - name: Check out the repository
       uses: actions/checkout@v4
+
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y xrdp xfce4 xfce4-goodies
+        sudo apt-get install -y xrdp xfce4 xfce4-goodies dbus-x11
         sudo systemctl enable xrdp
         sudo systemctl start xrdp
+        export $(dbus-launch)
         echo "xfce4-session" > ~/.xsession
-    - name: Configure User Password
+
+    - name: Configure User Password and XFCE Session
       run: |
-        # Cek apakah user runneradmin sudah ada, kalau belum bikin
         id runneradmin || sudo useradd -m -s /bin/bash runneradmin
-        echo "runneradmin:p@ssw0rd!" | sudo chpasswd  # Password di-hardcode
+        echo "runneradmin:p@ssw0rd!" | sudo chpasswd
+        echo "xfce4-session" | sudo tee /home/runneradmin/.xsession
+        sudo chown runneradmin:runneradmin /home/runneradmin/.xsession
+        sudo mkdir -p /home/runneradmin/.config/xfce4
+        sudo chown -R runneradmin:runneradmin /home/runneradmin/.config
+
     - name: Configure Firewall
       run: |
         sudo ufw allow 3389
-        sudo ufw reload
+        sudo ufw --force enable
+
     - name: Download and Install Playit
       run: |
         wget https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-linux-amd64 -O ~/playit
         chmod +x ~/playit
+
     - name: Start Playit and Set Up RDP Tunnel
       run: |
+        export XDG_CONFIG_DIRS="/etc/xdg"
         ~/playit --secret ${{ secrets.PL }} &
         sleep 5
         if ! pgrep -x "playit" > /dev/null; then
           echo "Playit failed to start"
           exit 1
         fi
+
     - name: Keep the GitHub Action Runner Alive
       run: |
+        echo "RDP tunnel is up. Keeping session alive..."
         sleep 11800
