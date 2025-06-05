@@ -9,52 +9,31 @@ jobs:
 
     steps:
     - name: Check out the repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v2
 
     - name: Download and Install Playit
       run: |
-        curl -L "https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-windows-x86_64-signed.exe" -o "$env:USERPROFILE\playit.exe"
-        Start-Sleep -Seconds 3
+        Invoke-WebRequest -Uri "https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-windows-x86_64-signed.exe" -OutFile "$env:USERPROFILE\playit.exe"
+        Start-Sleep -Seconds 5  # Give some time for the download to complete
 
-    - name: Optimize RDP Settings for Performance
-      run: |
-        # Aktifkan RDP
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
-        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
-        # Optimasi performa RDP
-        Set-ItemProperty -Path 'HKLM:\Software\Policies\Microsoft\Windows NT\Terminal Services' -Name "VisualEffects" -Value 0 -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path 'HKLM:\Software\Policies\Microsoft\Windows NT\Terminal Services' -Name "bEnumerateHWBeforeSW" -Value 1 -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path 'HKLM:\Software\Policies\Microsoft\Windows NT\Terminal Services' -Name "ColorDepth" -Value 4
-        Set-ItemProperty -Path 'HKLM:\Software\Policies\Microsoft\Windows NT\Terminal Services' -Name "Wallpaper" -Value 0 -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Services\Tcpip\Parameters' -Name "DisableTaskOffload" -Value 1 -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path 'HKLM:\Software\Policies\Microsoft\Windows NT\Terminal Services' -Name "Compression" -Value 1 -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path 'HKLM:\Software\Policies\Microsoft\Windows NT\Terminal Services' -Name "Shadow" -Value 0 -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path 'HKLM:\Software\Policies\Microsoft\Windows NT\Terminal Services' -Name "fDisableBitmapCaching" -Value 1 -ErrorAction SilentlyContinue
-        # Setup Dev Drive
-        if (-not (Get-Partition -DriveLetter D -ErrorAction SilentlyContinue)) {
-          New-Partition -DiskNumber 0 -UseMaximumSize -DriveLetter D -IsActive
-          Format-Volume -DriveLetter D -FileSystem ReFS -NewFileSystemLabel "DevDrive"
-        }
-
-    - name: Set User Password
-      run: |
-        Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "p@ssw0rd123!" -Force)
+        
+    # Default, optional.
+    - name: Enable TS
+      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server'-name "fDenyTSConnections" -Value 0
+    - run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+    - run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+    - run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "p@ssw0rd!" -Force)
 
     - name: Start Playit and Set Up RDP Tunnel
       env:
-        PLAYIT_AUTH_KEY: ${{ secrets.PL }}
+        PLAYIT_AUTH_KEY: ${{ secrets.PL }} 
       run: |
-        Move-Item -Path "$env:USERPROFILE\playit.exe" -Destination "D:\playit.exe"
-        # Jalankan Playit di background
-        Start-Process -FilePath "D:\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -RedirectStandardOutput "D:\playit.log" -NoNewWindow
-        # Tunggu sebentar agar Playit aktif
-        Start-Sleep -Seconds 10
-        Get-Content "D:\playit.log"
-        # Cek apakah Playit berjalan
-        Get-Process -Name "playit" -ErrorAction SilentlyContinue
+        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow -Wait
+        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -NoNewWindow
 
+        
+    # Prevent workflow to stop
     - name: Keep the GitHub Action Runner Alive
       run: |
-        Write-Output "RDP running on port 3389, check Playit dashboard for tunnel address"
-        Start-Sleep -Seconds 21500
+          Start-Sleep -Seconds 11800  # Adjust the duration based on your needs
+          
