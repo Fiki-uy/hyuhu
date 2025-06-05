@@ -53,8 +53,6 @@ jobs:
         Get-Content "D:\playit.log"
         # Cek apakah Playit berjalan
         Get-Process -Name "playit" -ErrorAction SilentlyContinue
-        # Cek latensi (ganti xxx.playit.gg dengan alamat tunnel kamu)
-        ping xxx.playit.gg -n 10
 
     - name: Keep the GitHub Action Runner Alive
       run: |
