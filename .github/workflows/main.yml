@@ -5,34 +5,36 @@ on:
 
 jobs:
   setup-rdp-tunnel:
-    runs-on: windows-2025
+    runs-on: ubuntu-latest
 
     steps:
     - name: Check out the repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Download and Install Playit
       run: |
-        Invoke-WebRequest -Uri "https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-windows-x86_64-signed.exe" -OutFile "$env:USERPROFILE\playit.exe"
-        Start-Sleep -Seconds 5  # Give some time for the download to complete
+        wget -O ~/playit https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-linux-amd64
+        chmod +x ~/playit
+        sleep 5
 
-        
-    # Default, optional.
-    - name: Enable TS
-      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server'-name "fDenyTSConnections" -Value 0
-    - run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-    - run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
-    - run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "p@ssw0rd!" -Force)
+    - name: Install XRDP and Desktop Environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xrdp xfce4 xfce4-goodies
+        sudo systemctl enable xrdp
+        sudo systemctl start xrdp
+        echo "runner:p@ssw0rd123" | sudo chpasswd  # Ganti dengan password yang lebih aman
+        echo xfce4-session > ~/.xsession
+        sudo ufw allow 3389
 
     - name: Start Playit and Set Up RDP Tunnel
       env:
         PLAYIT_AUTH_KEY: ${{ secrets.PL }} 
       run: |
-        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow -Wait
-        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -NoNewWindow
+        ~/playit --secret $PLAYIT_AUTH_KEY &
+        sleep 10
 
-        
-    # Prevent workflow to stop
     - name: Keep the GitHub Action Runner Alive
       run: |
-          Start-Sleep -Seconds 11800  # Adjust the duration based on your needs
+        echo "RDP running on port 3389, check Playit dashboard for tunnel address"
+        sleep 11800
