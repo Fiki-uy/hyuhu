@@ -5,7 +5,7 @@ on:
 
 jobs:
   setup-rdp-tunnel:
-    runs-on: windows-2025  # Tetap pake windows-2025
+    runs-on: windows-2025
 
     steps:
     - name: Check out the repository
@@ -14,7 +14,7 @@ jobs:
     - name: Download and Install Playit
       run: |
         Invoke-WebRequest -Uri "https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-windows-x86_64-signed.exe" -OutFile "$env:USERPROFILE\playit.exe"
-        Start-Sleep -Seconds 3  # Kurangi dari 5 detik
+        Start-Sleep -Seconds 3
 
     - name: Enable TS
       run: |
@@ -25,25 +25,16 @@ jobs:
 
     - name: Optimize Graphics and Remove Bloatware
       run: |
-        # Disable Windows animations and visual effects
         Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'UserPreferencesMask' -Value ([byte[]](0x90,0x12,0x03,0x80,0x10,0x00,0x00,0x00))
         Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop\WindowMetrics' -Name 'MinAnimate' -Value 0
         Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects' -Name 'VisualFXSetting' -Value 3
-
-        # Lower RDP resolution and color depth
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name 'MaxMonitors' -Value 1
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name 'MaxXResolution' -Value 1280
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name 'MaxYResolution' -Value 720
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name 'ColorDepth' -Value 4  # 16-bit color
-
-        # Remove bloatware (Xbox, Zune, Bing, Visual Studio, etc.)
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name 'ColorDepth' -Value 4
         Get-AppxPackage -AllUsers | Where-Object { $_.Name -like "*Xbox*" -or $_.Name -like "*Zune*" -or $_.Name -like "*Bing*" -or $_.Name -like "*Microsoft.MixedReality*" -or $_.Name -like "*Microsoft.549981C3F5F10*" -or $_.Name -like "*Microsoft.VCLibs*" -or $_.Name -like "*Microsoft.VSCode*" } | Remove-AppxPackage -ErrorAction SilentlyContinue
         Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -like "*Xbox*" -or $_.DisplayName -like "*Zune*" -or $_.DisplayName -like "*Bing*" -or $_.DisplayName -like "*Microsoft.MixedReality*" -or $_.DisplayName -like "*Microsoft.549981C3F5F10*" -or $_.DisplayName -like "*Microsoft.VCLibs*" -or $_.DisplayName -like "*Microsoft.VSCode*" } | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
-
-        # Uninstall Visual Studio (if installed)
         Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like "*Visual Studio*" } | ForEach-Object { $_.Uninstall() } -ErrorAction SilentlyContinue
-
-        # Disable unnecessary services
         Stop-Service -Name "XboxGipSvc" -Force -ErrorAction SilentlyContinue
         Set-Service -Name "XboxGipSvc" -StartupType Disabled -ErrorAction SilentlyContinue
         Stop-Service -Name "WSearch" -Force -ErrorAction SilentlyContinue
@@ -59,7 +50,7 @@ jobs:
 
     - name: Upload Playit Log
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4  # Upgrade ke v4
       with:
         name: playit-log
         path: $env:USERPROFILE\playit.log
